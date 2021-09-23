@@ -34,6 +34,16 @@
       <artifactId>quarkus-smallrye-reactive-messaging-amqp</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-amqp-client</artifactId>
+      <version>4.2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-proton</artifactId>
+      <version>4.2.0</version>
+    </dependency>
+    <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-arc</artifactId>
     </dependency>
