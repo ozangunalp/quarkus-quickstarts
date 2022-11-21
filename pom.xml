@@ -49,6 +49,7 @@
         <module>kafka-avro-schema-quickstart</module>
         <module>kafka-bare-quickstart</module>
         <module>kafka-streams-quickstart</module>
+        <module>kafka-checkpoint-quickstart</module>
         <module>kogito-quickstart</module>
         <module>kogito-drl-quickstart</module>
         <module>kogito-dmn-quickstart</module>
