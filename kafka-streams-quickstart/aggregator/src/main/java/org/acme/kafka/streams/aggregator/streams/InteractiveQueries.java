@@ -1,6 +1,7 @@
 package org.acme.kafka.streams.aggregator.streams;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -16,6 +17,7 @@ import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.errors.InvalidStateStoreException;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 import org.wildfly.common.net.HostName;
 
@@ -26,9 +28,12 @@ public class InteractiveQueries {
 
     @Inject
     KafkaStreams streams;
+    
+    @ConfigProperty(name = "quarkus.kafka-streams.application-server")
+    Optional<String> appServer;
 
     public List<PipelineMetadata> getMetaData() {
-        return streams.allMetadataForStore(TopologyProducer.WEATHER_STATIONS_STORE)
+        return streams.streamsMetadataForStore(TopologyProducer.WEATHER_STATIONS_STORE)
                 .stream()
                 .map(m -> new PipelineMetadata(
                         m.hostInfo().host() + ":" + m.hostInfo().port(),
@@ -44,11 +49,10 @@ public class InteractiveQueries {
                 TopologyProducer.WEATHER_STATIONS_STORE,
                 id,
                 Serdes.Integer().serializer());
-
         if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
             LOG.warnv("Found no metadata for key {0}", id);
             return GetWeatherStationDataResult.notFound();
-        } else if (metadata.activeHost().host().equals(HostName.getQualifiedHostName())) {
+        } else if (metadata.activeHost().host().equals(getHostName())) {
             LOG.infov("Found data for key {0} locally", id);
             Aggregation result = getWeatherStationStore().get(id);
 
@@ -62,6 +66,12 @@ public class InteractiveQueries {
             return GetWeatherStationDataResult.foundRemotely(metadata.activeHost().host(), metadata.activeHost().port());
         }
     }
+    
+    private String getHostName() {
+        return appServer.map(s -> s.trim().split(":")[0])
+                .orElseGet(HostName::getQualifiedHostName);
+    }
+    
 
     private ReadOnlyKeyValueStore<Integer, Aggregation> getWeatherStationStore() {
         while (true) {

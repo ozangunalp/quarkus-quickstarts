@@ -1,16 +1,19 @@
 package org.acme.kafka.streams.aggregator.streams;
 
+import static io.restassured.RestAssured.given;
 import static org.acme.kafka.streams.aggregator.streams.TopologyProducer.TEMPERATURES_AGGREGATED_TOPIC;
 import static org.acme.kafka.streams.aggregator.streams.TopologyProducer.TEMPERATURE_VALUES_TOPIC;
 import static org.acme.kafka.streams.aggregator.streams.TopologyProducer.WEATHER_STATIONS_TOPIC;
+import static org.hamcrest.Matchers.equalTo;
+import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
 
+import java.net.URL;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 
 import org.acme.kafka.streams.aggregator.model.Aggregation;
 import org.acme.kafka.streams.aggregator.model.WeatherStation;
@@ -25,6 +28,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +38,7 @@ import org.junit.jupiter.api.Timeout;
 import io.quarkus.kafka.client.serialization.ObjectMapperDeserializer;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerializer;
 import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
@@ -43,11 +48,16 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTestResource(KafkaResource.class)
 public class AggregatorTest {
 
+    @TestHTTPResource("/weather-stations/data")
+    URL url;
+
     KafkaProducer<Integer, String> temperatureProducer;
 
     KafkaProducer<Integer, WeatherStation> weatherStationsProducer;
 
     KafkaConsumer<Integer, Aggregation> weatherStationsConsumer;
+    
+    
 
     @BeforeEach
     public void setUp(){
@@ -77,6 +87,14 @@ public class AggregatorTest {
         Assertions.assertEquals(1, results.get(0).value().stationId);
         Assertions.assertEquals("Station 1", results.get(0).value().stationName);
         Assertions.assertEquals(20, results.get(0).value().avg);
+
+        await().untilAsserted(() -> {
+            given()
+                    .when().get(url + "/1")
+                    .then()
+                    .statusCode(200)
+                    .body("avg", equalTo(20.0F));
+        });
     }
 
     private Properties consumerProps() {
